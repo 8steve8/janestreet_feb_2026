@@ -1,3 +1,8 @@
+"""
+    prettyprint(m::Matrix{UInt8})
+
+Prints a formatted representation of the matrix `m`. 
+Aligns single-digit numbers by adding a leading space.
 function prettyprint(m::Matrix{UInt8})
     for i in 1:size(m,1)
         for j in 1:size(m,2)
@@ -14,6 +19,11 @@ end
 
 
 # Create a 13x13 matrix of 8-bit unsigned integers (UInt8) initialized to 0
+"""
+    initme()
+
+CONSTRUCTS `o_data` dictionary and populates the `original_matrix`.
+"""
 function initme()
     original_matrix = zeros(UInt8,13, 13)
     o_data = Dict()
