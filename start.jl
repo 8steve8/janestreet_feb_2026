@@ -27,10 +27,20 @@ function prettyprint(m::BitMatrix)
     end
 end
 
+function congruentshapes(shape::BitMatrix)::Vector{BitMatrix}
+    congruentshapes = Set{BitMatrix}()
+    push!(congruentshapes, shape)
+    push!(congruentshapes, rotr90(shape))
+    push!(congruentshapes, rotl90(shape))
+    push!(congruentshapes, reverse(shape))
+    for el in collect(congruentshapes)
+        push!(congruentshapes, reverse(el, dims=1))
+    end
+    return sort(collect(congruentshapes), by=vec)
+end
 
 function nextshapes(shape::BitMatrix)::Set{BitMatrix}
     newshapes = Set{BitMatrix}()
-    current_N = count(shape)
     newshape = [falses(size(shape)[1], 1) shape falses(size(shape)[1], 1)]
     newshape = [falses(1, size(newshape)[2]); newshape; falses(1, size(newshape)[2])]
     for x in axes(newshape, 1)
@@ -44,7 +54,6 @@ function nextshapes(shape::BitMatrix)::Set{BitMatrix}
                 tempshape[x, y] = true
                 if x != 1
                     tempshape = tempshape[2:end, :]
-
                 end
                 if x != size(newshape, 1)
                     tempshape = tempshape[1:end-1, :]
@@ -56,17 +65,8 @@ function nextshapes(shape::BitMatrix)::Set{BitMatrix}
                     tempshape = tempshape[:, 1:end-1]
                 end
 
-                congruentshapes = Set{BitMatrix}()
-                push!(congruentshapes, tempshape)
-                push!(congruentshapes, rotr90(tempshape))
-                push!(congruentshapes, rotl90(tempshape))
-                push!(congruentshapes, reverse(tempshape))
-                for el in collect(congruentshapes)
-                    push!(congruentshapes, reverse(el, dims=1))
-                end
-                if isdisjoint(newshapes, congruentshapes)
-                    push!(newshapes, tempshape)
-                end
+                push!(newshapes, congruentshapes(tempshape)[1])
+
             end
         end
     end
@@ -103,7 +103,7 @@ function initme()
 
 
     for i in 1:16
-        original_data[i] = Tuple(data[i])
+        original_data[i] = Tuple(sort(data[i]))
         data[i] = Set(data[i])
         for j in data[i]
             min_row[i] = min(min_row[i], j[1])
@@ -150,6 +150,9 @@ function initme()
         println()
     end
     println("done")
+
+
+
 
     while true
         break
