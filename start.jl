@@ -7,7 +7,12 @@ function prettyprint(m::Matrix{UInt8})
             #println(typeof(m[i,j]))
 
             (m[i, j] < UInt8(10)) && print(" ")
-            print(m[i, j], " ")
+            if m[i, j] != 0
+                printstyled(m[i, j], color=:green)
+            else
+                printstyled(m[i, j], color=:white)
+            end
+            print(" ")
         end
         println()
     end
@@ -27,7 +32,7 @@ function prettyprint(m::BitMatrix)
     end
 end
 
-function congruentshapes(shape::BitMatrix)::Vector{BitMatrix}
+function congruentshapes(shape::BitMatrix)::Tuple{Vararg{BitMatrix}}
     congruentshapes = Set{BitMatrix}()
     push!(congruentshapes, shape)
     push!(congruentshapes, rotr90(shape))
@@ -36,10 +41,11 @@ function congruentshapes(shape::BitMatrix)::Vector{BitMatrix}
     for el in collect(congruentshapes)
         push!(congruentshapes, reverse(el, dims=1))
     end
-    return sort(collect(congruentshapes), by=vec)
+    return Tuple(sort(collect(congruentshapes), by=vec))
 end
 
-function nextshapes(shape::BitMatrix)::Set{BitMatrix}
+
+function nextshapes(shape::BitMatrix)::Tuple{Vararg{BitMatrix}}
     newshapes = Set{BitMatrix}()
     newshape = [falses(size(shape)[1], 1) shape falses(size(shape)[1], 1)]
     newshape = [falses(1, size(newshape)[2]); newshape; falses(1, size(newshape)[2])]
@@ -70,12 +76,12 @@ function nextshapes(shape::BitMatrix)::Set{BitMatrix}
             end
         end
     end
-    return newshapes
+    return Tuple(sort(collect(newshapes), by=vec))
 end
 
 
 function initme()
-    original_matrix = zeros(UInt8, 13, 13)
+    originalmatrix = zeros(UInt8, 13, 13)
     data = Dict()
     data[1] = [(7, 9)]
     data[2] = [(10, 2)]
@@ -94,7 +100,7 @@ function initme()
     data[15] = [(1, 5), (3, 2), (3, 7), (4, 5)]
     data[16] = [(5, 2), (6, 4), (7, 3), (7, 7), (10, 6)]
 
-    original_data = Dict{UInt8,Tuple{Vararg{Tuple{UInt8,UInt8}}}}()
+    originaldata = Dict{UInt8,Tuple{Vararg{Tuple{UInt8,UInt8}}}}()
 
     min_row = fill(typemax(UInt8), 16)
     max_row = fill(typemin(UInt8), 16)
@@ -103,7 +109,7 @@ function initme()
 
 
     for i in 1:16
-        original_data[i] = Tuple(sort(data[i]))
+        originaldata[i] = Tuple(sort(data[i]))
         data[i] = Set(data[i])
         for j in data[i]
             min_row[i] = min(min_row[i], j[1])
@@ -119,37 +125,91 @@ function initme()
 
 
     for i in 1:16
-        for j in original_data[i]
-            original_matrix[j[1], j[2]] = UInt8(i)
+        for j in originaldata[i]
+            originalmatrix[j[1], j[2]] = UInt8(i)
         end
     end
+    matrix = copy(originalmatrix)
 
 
 
-    println(original_data)
+    println(originaldata)
 
-    println(original_matrix)
+    println(originalmatrix)
 
-    prettyprint(original_matrix)
+    prettyprint(originalmatrix)
 
     println(data[2])
     push!(data[2], (11, 2))
     println(data[2])
-    println(original_data[2])
+    println(originaldata[2])
 
 
     N::UInt8 = 1
-    shapes = Dict{UInt8,BitMatrix}()
-    shapes[1] = BitMatrix(trues(1, 1))
+    #shapes = Dict{UInt8,BitMatrix}()
+    shapes = Dict{UInt8,Tuple{Vararg{BitMatrix}}}()
+
+    shapes[1] = Tuple([BitMatrix(trues(1, 1))])
+    placement = [(0x00, 0x00) for _ in 1:16]
 
     matrix = zeros(UInt8, 13, 13)
+    matrices = [zeros(UInt8, 13, 13) for _ in 1:16]
+    matrices[1] = copy(originalmatrix)
     println("ok")
-    nextshapes2 = nextshapes(shapes[1])
-    for i in nextshapes2
-        prettyprint(i)
-        println()
+
+    shapeidx = ones(UInt8, 13)
+    congruenceidx = ones(UInt8, 13)
+    shapes[2] = nextshapes(shapes[1][1])
+    congruent_shapes = congruentshapes(shapes[1][1])
+
+    return
+    while N < 17
+        congruenceidx[N] += 1
+        if congruenceidx[N] > length(congruent_shapes)
+            congruenceidx[N] = 1
+            shapeidx[N] += 1
+            if shapeidx[N] > length(shapes[N])
+                shapeidx[N] = 1
+                N -= 1
+                shapeidx[N] += 1
+                shape = shapes[shapeidx[N]]
+                congruent_shapes = congruentshapes(shape)
+                continue
+            end
+        end
+
+        shape = shapes[shapeidx[N]]
+        congruent_shapes = congruentshapes(shape)
+
+        for row in max(1, max_row[N] - size(shape, 1) + 1):min(13 - size(shape, 1) + 1, min_row[N])
+            for col in max(1, max_col[N] - size(shape, 2) + 1):min(13 - size(shape, 2) + 1, min_col[N])
+                for r in axes(shape, 1)
+                    for c in axes(shape, 2)
+                        if shape[r, c] && matrices[N][row+r-1, col+c-1] != 0 && matrices[N][row+r-1, col+c-1] != N
+                            @goto does_not_fit
+                        end
+                    end
+                end
+
+
+                placement[N] = (row, col)
+                matrices[N] = copy(matrices[N-1])
+                for r in axes(shape, 1)
+                    for c in axes(shape, 2)
+                        if shape[r, c]
+                            matrices[N][row+r-1, col+c-1] = N
+                        end
+                    end
+                end
+
+                @label does_not_fit
+            end
+        end
+
+
+
     end
-    println("done")
+
 
 
 
