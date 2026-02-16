@@ -32,32 +32,53 @@ function prettyprint(m::BitMatrix)
     end
 end
 function ispossible(N::UInt8, matrix::Matrix{UInt8}, originaldata::Dict{UInt8,Tuple{Vararg{Tuple{UInt8,UInt8}}}})::Bool
+
     for n in N+1:length(originaldata)
+        bmatrix = falses(size(matrix))
+        bmatrix[originaldata[n][1][1], originaldata[n][1][2]] = true
+        #println("bmatrix = ", bmatrix)
         locs = Set([originaldata[n][1]])
 
+        #newlocs = Set{Tuple{UInt8,UInt8}}()
+        newlocs = Set([originaldata[n][1]])
+
         for _ in 2:n
-            locssize = length(locs)
-            for l in collect(locs)
-                if l[1] > 1 && (matrix[l[1]-1, l[2]] == 0 || matrix[l[1]-1, l[2]] == n)
-                    push!(locs, (l[1] - 1, l[2]))
+            added = false
+
+            for l in newlocs
+                if l[1] > 1 && !bmatrix[l[1]-1, l[2]] && (matrix[l[1]-1, l[2]] == 0 || matrix[l[1]-1, l[2]] == n)
+                    push!(newlocs, (l[1] - 1, l[2]))
+                    bmatrix[l[1]-1, l[2]] = true
+                    added = true
                 end
-                if l[1] < size(matrix, 1) && (matrix[l[1]+1, l[2]] == 0 || matrix[l[1]+1, l[2]] == n)
-                    push!(locs, (l[1] + 1, l[2]))
+                if l[1] < size(matrix, 1) && !bmatrix[l[1]+1, l[2]] && (matrix[l[1]+1, l[2]] == 0 || matrix[l[1]+1, l[2]] == n)
+                    push!(newlocs, (l[1] + 1, l[2]))
+                    bmatrix[l[1]+1, l[2]] = true
+                    added = true
                 end
-                if l[2] > 1 && (matrix[l[1], l[2]-1] == 0 || matrix[l[1], l[2]-1] == n)
-                    push!(locs, (l[1], l[2] - 1))
+                if l[2] > 1 && !bmatrix[l[1], l[2]-1] && (matrix[l[1], l[2]-1] == 0 || matrix[l[1], l[2]-1] == n)
+                    push!(newlocs, (l[1], l[2] - 1))
+                    bmatrix[l[1], l[2]-1] = true
+                    added = true
                 end
-                if l[2] < size(matrix, 2) && (matrix[l[1], l[2]+1] == 0 || matrix[l[1], l[2]+1] == n)
-                    push!(locs, (l[1], l[2] + 1))
+                if l[2] < size(matrix, 2) && !bmatrix[l[1], l[2]+1] && (matrix[l[1], l[2]+1] == 0 || matrix[l[1], l[2]+1] == n)
+                    push!(newlocs, (l[1], l[2] + 1))
+                    bmatrix[l[1], l[2]+1] = true
+                    added = true
                 end
             end
-            if locssize == length(locs)
+
+            if !added
                 break
             end
+            union!(locs, newlocs)
+
         end
 
-        if !issubset(originaldata[n], locs)
-            return false
+        for d in originaldata[n]
+            if !bmatrix[d[1], d[2]]
+                return false
+            end
         end
 
     end
@@ -219,6 +240,13 @@ function initme()
                 shapeidx[N] = 1
                 #congruent_shapes[N] = congruentshapes(shapes[N][shapeidx[N]])
                 N -= 1
+                if N == 0
+                    println("N = ", N)
+                    println("shapeidx = ", shapeidx)
+                    println("congruenceidx = ", congruenceidx)
+                    println("placement = ", placement)
+                    println("matrices = ", matrices)
+                end
                 congruenceidx[N] += 1
             end
             congruent_shapes[N] = congruentshapes(shapes[N][shapeidx[N]])
@@ -259,7 +287,7 @@ function initme()
 
 
                 placement[N] = (row, col)
-                if time() - t1 > 100
+                if time() - t1 > 100 || N >= 15
                     println("time = ", time() - t0, " seconds")
                     println(N)
                     println(shapeidx)
