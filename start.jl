@@ -34,7 +34,9 @@ end
 function ispossible(N::UInt8, matrix::Matrix{UInt8}, originaldata::Dict{UInt8,Tuple{Vararg{Tuple{UInt8,UInt8}}}})::Bool
     for n in N+1:length(originaldata)
         locs = Set([originaldata[n][1]])
+
         for _ in 2:n
+            locssize = length(locs)
             for l in collect(locs)
                 if l[1] > 1 && (matrix[l[1]-1, l[2]] == 0 || matrix[l[1]-1, l[2]] == n)
                     push!(locs, (l[1] - 1, l[2]))
@@ -48,6 +50,9 @@ function ispossible(N::UInt8, matrix::Matrix{UInt8}, originaldata::Dict{UInt8,Tu
                 if l[2] < size(matrix, 2) && (matrix[l[1], l[2]+1] == 0 || matrix[l[1], l[2]+1] == n)
                     push!(locs, (l[1], l[2] + 1))
                 end
+            end
+            if locssize == length(locs)
+                break
             end
         end
 
