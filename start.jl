@@ -164,7 +164,6 @@ function initme()
     min_col = fill(typemax(UInt8), 16)
     max_col = fill(typemin(UInt8), 16)
 
-
     for i in 1:16
         originaldata[i] = Tuple(sort(data[i]))
         data[i] = Set(data[i])
@@ -180,20 +179,14 @@ function initme()
     println("min_col = ", min_col)
     println("max_col = ", max_col)
 
-
     for i in 1:16
         for j in originaldata[i]
             originalmatrix[j[1], j[2]] = UInt8(i)
         end
     end
-    matrix = copy(originalmatrix)
-
-
 
     println(originaldata)
-
     println(originalmatrix)
-
     prettyprint(originalmatrix)
 
     println(data[2])
@@ -201,15 +194,13 @@ function initme()
     println(data[2])
     println(originaldata[2])
 
-
-    N::UInt8 = 1
-    #shapes = Dict{UInt8,BitMatrix}()
     shapes = Dict{UInt8,Tuple{Vararg{BitMatrix}}}()
-
-    shapes[1] = Tuple([BitMatrix(trues(1, 1))])
     placement = [(0x00, 0x00) for _ in 1:16]
 
-    matrix = zeros(UInt8, 13, 13)
+    N::UInt8 = 1
+    shapes[1] = Tuple([BitMatrix(trues(1, 1))])
+    placement[1] = originaldata[1][1]
+
     matrices = [zeros(UInt8, 13, 13) for _ in 1:16]
     matrices[1] = copy(originalmatrix)
     println("ok")
@@ -227,7 +218,6 @@ function initme()
     congruent_shapes[N] = congruentshapes(shapes[N][shapeidx[N]])
     congruenceidx[N] = 1
 
-
     t0 = time()
     t1 = t0
 
@@ -238,7 +228,7 @@ function initme()
             shapeidx[N] += 1
             if shapeidx[N] > length(shapes[N])
                 shapeidx[N] = 1
-                #congruent_shapes[N] = congruentshapes(shapes[N][shapeidx[N]])
+                congruent_shapes[N] = congruentshapes(shapes[N][shapeidx[N]])
                 N -= 1
                 if N == 0
                     println("N = ", N)
@@ -247,10 +237,13 @@ function initme()
                     println("placement = ", placement)
                     println("matrices = ", matrices)
                 end
-                congruenceidx[N] += 1
+                #congruenceidx[N] += 1
+            else
+                congruent_shapes[N] = congruentshapes(shapes[N][shapeidx[N]])
             end
-            congruent_shapes[N] = congruentshapes(shapes[N][shapeidx[N]])
+
             continue
+
         end
 
         shape = congruent_shapes[N][congruenceidx[N]]
