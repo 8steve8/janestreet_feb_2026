@@ -217,10 +217,7 @@ function initme()
     t1 = t0
 
     while N < 17
-        if time() - t0 > 10
-            println("Profiling timeout reached.")
-            break
-        end
+
         #congruenceidx[N] += 1
         if congruenceidx[N] > length(congruent_shapes[N])
             congruenceidx[N] = 1
