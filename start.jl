@@ -102,6 +102,8 @@ function initme()
 
     #add (4,11) to data[12] b/c it has to be there
     push!(data[12], (4, 11))
+    push!(data[12], (5, 10))
+    push!(data[12], (6, 10))
 
     originaldata = Dict{UInt8,Tuple{Vararg{Tuple{UInt8,UInt8}}}}()
 
