@@ -163,37 +163,49 @@ function initme()
     congruent_shapes = congruentshapes(shapes[1][1])
 
     return
+    shape = shapes[N][shapeidx[N]]
+    congruent_shapes = Dict{UInt8,Tuple{Vararg{BitMatrix}}}()
+    congruent_shapes[N] = congruentshapes(shape)
+
     while N < 17
-        congruenceidx[N] += 1
+        #congruenceidx[N] += 1
         if congruenceidx[N] > length(congruent_shapes)
             congruenceidx[N] = 1
             shapeidx[N] += 1
             if shapeidx[N] > length(shapes[N])
                 shapeidx[N] = 1
+                congruent_shapes[N] = congruentshapes(shapes[N][shapeidx[N]])
                 N -= 1
-                shapeidx[N] += 1
-                shape = shapes[shapeidx[N]]
-                congruent_shapes = congruentshapes(shape)
-                continue
+
+                N < 1 && break
+                congruenceidx[N] += 1
             end
+            congruent_shapes[N] = congruentshapes(shapes[N][shapeidx[N]])
+            continue
         end
 
-        shape = shapes[shapeidx[N]]
-        congruent_shapes = congruentshapes(shape)
+        shape = congruent_shapes[N][congruenceidx[N]]
 
-        for row in max(1, max_row[N] - size(shape, 1) + 1):min(13 - size(shape, 1) + 1, min_row[N])
-            for col in max(1, max_col[N] - size(shape, 2) + 1):min(13 - size(shape, 2) + 1, min_col[N])
+        for row in max(placement[N][1], 1, max_row[N] - size(shape, 1) + 1):min(13 - size(shape, 1) + 1, min_row[N])
+            for col in max(placement[N][2] + 1, 1, max_col[N] - size(shape, 2) + 1):min(13 - size(shape, 2) + 1, min_col[N])
                 for r in axes(shape, 1)
                     for c in axes(shape, 2)
-                        if shape[r, c] && matrices[N][row+r-1, col+c-1] != 0 && matrices[N][row+r-1, col+c-1] != N
+                        if shape[r, c] && (matrices[N][row+r-1, col+c-1] != 0) && (matrices[N][row+r-1, col+c-1] != N)
                             @goto does_not_fit
                         end
+                    end
+                end
+
+                for p in originaldata[N]
+                    if !shape[p[1]-row+1, p[2]-col+1]
+                        @goto does_not_fit
                     end
                 end
 
 
                 placement[N] = (row, col)
                 matrices[N] = copy(matrices[N-1])
+
                 for r in axes(shape, 1)
                     for c in axes(shape, 2)
                         if shape[r, c]
@@ -202,21 +214,30 @@ function initme()
                     end
                 end
 
+                N += 1
+                N > 16 && @goto end_of_program
+                congruenceidx[N] = 1
+                shapeidx[N] = 1
+                shapes[N] = nextshapes(shape)
+                congruent_shapes[N] = congruentshapes(shapes[N][shapeidx[N]])
+                @goto next_N
+
                 @label does_not_fit
             end
         end
 
 
+        @label next_N
+        placement[N] = (0, 0)
+
+
+
 
     end
+    @label end_of_program
+    prettyprint(matrices[16])
 
 
-
-
-
-    while true
-        break
-    end
 
 
 end
