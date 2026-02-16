@@ -1,6 +1,3 @@
-#yes
-
-
 function prettyprint(m::Matrix{UInt8})
     for i in 1:size(m, 1)
         for j in 1:size(m, 2)
@@ -37,10 +34,8 @@ function ispossible(N::UInt8, matrix::Matrix{UInt8}, originaldata::Dict{UInt8,Tu
         bmatrix = falses(size(matrix))
         bmatrix[originaldata[n][1][1], originaldata[n][1][2]] = true
         #println("bmatrix = ", bmatrix)
-        locs = Set([originaldata[n][1]])
 
-        #newlocs = Set{Tuple{UInt8,UInt8}}()
-        newlocs = Set([originaldata[n][1]])
+        newlocs = [originaldata[n][1]]
 
         for _ in 2:n
             added = false
@@ -71,7 +66,7 @@ function ispossible(N::UInt8, matrix::Matrix{UInt8}, originaldata::Dict{UInt8,Tu
             if !added
                 break
             end
-            union!(locs, newlocs)
+            #union!(locs, newlocs)
 
         end
 
@@ -222,10 +217,15 @@ function initme()
     t1 = t0
 
     while N < 17
+        if time() - t0 > 10
+            println("Profiling timeout reached.")
+            break
+        end
         #congruenceidx[N] += 1
         if congruenceidx[N] > length(congruent_shapes[N])
             congruenceidx[N] = 1
             shapeidx[N] += 1
+            #placement[N] = (0x00, 0x00)
             if shapeidx[N] > length(shapes[N])
                 shapeidx[N] = 1
                 congruent_shapes[N] = congruentshapes(shapes[N][shapeidx[N]])
