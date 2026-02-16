@@ -100,6 +100,9 @@ function initme()
     data[15] = [(1, 5), (3, 2), (3, 7), (4, 5)]
     data[16] = [(5, 2), (6, 4), (7, 3), (7, 7), (10, 6)]
 
+    #add (4,11) to data[12] b/c it has to be there
+    push!(data[12], (4, 11))
+
     originaldata = Dict{UInt8,Tuple{Vararg{Tuple{UInt8,UInt8}}}}()
 
     min_row = fill(typemax(UInt8), 16)
