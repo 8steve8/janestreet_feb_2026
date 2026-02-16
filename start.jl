@@ -31,6 +31,34 @@ function prettyprint(m::BitMatrix)
         println()
     end
 end
+function ispossible(N::UInt8, matrix::Matrix{UInt8}, originaldata::Dict{UInt8,Tuple{Vararg{Tuple{UInt8,UInt8}}}})::Bool
+    for n in N+1:length(originaldata)
+        locs = Set([originaldata[n][1]])
+        for _ in 2:n
+            for l in collect(locs)
+                if l[1] > 1 && (matrix[l[1]-1, l[2]] == 0 || matrix[l[1]-1, l[2]] == n)
+                    push!(locs, (l[1] - 1, l[2]))
+                end
+                if l[1] < size(matrix, 1) && (matrix[l[1]+1, l[2]] == 0 || matrix[l[1]+1, l[2]] == n)
+                    push!(locs, (l[1] + 1, l[2]))
+                end
+                if l[2] > 1 && (matrix[l[1], l[2]-1] == 0 || matrix[l[1], l[2]-1] == n)
+                    push!(locs, (l[1], l[2] - 1))
+                end
+                if l[2] < size(matrix, 2) && (matrix[l[1], l[2]+1] == 0 || matrix[l[1], l[2]+1] == n)
+                    push!(locs, (l[1], l[2] + 1))
+                end
+            end
+        end
+
+        if !issubset(originaldata[n], locs)
+            return false
+        end
+
+    end
+    return true
+end
+
 
 function congruentshapes(shape::BitMatrix)::Tuple{Vararg{BitMatrix}}
     congruentshapes = Set{BitMatrix}()
@@ -100,10 +128,8 @@ function initme()
     data[15] = [(1, 5), (3, 2), (3, 7), (4, 5)]
     data[16] = [(5, 2), (6, 4), (7, 3), (7, 7), (10, 6)]
 
-    #add (4,11) to data[12] b/c it has to be there
-    push!(data[12], (4, 11))
-    push!(data[12], (5, 10))
-    push!(data[12], (6, 10))
+    #to data[12] b/c it has to be there
+    push!(data[12], (4, 11), (5, 10), (6, 10))
 
     originaldata = Dict{UInt8,Tuple{Vararg{Tuple{UInt8,UInt8}}}}()
 
@@ -213,8 +239,6 @@ function initme()
                 end
 
 
-
-                placement[N] = (row, col)
                 matrices[N] = copy(matrices[N-1])
 
                 for r in axes(shape, 1)
@@ -224,6 +248,12 @@ function initme()
                         end
                     end
                 end
+                if !ispossible(N, matrices[N], originaldata)
+                    @goto does_not_fit
+                end
+
+
+                placement[N] = (row, col)
                 if time() - t1 > 100
                     println("time = ", time() - t0, " seconds")
                     println(N)
