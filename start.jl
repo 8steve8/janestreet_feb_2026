@@ -1,4 +1,4 @@
-using Profile
+
 
 function prettyprint(m::Matrix{UInt8})
     for i in 1:size(m, 1)
@@ -126,6 +126,7 @@ end
 
 const nextShapeDict = Dict{Tuple{UInt8,UInt8,UInt128,UInt64},Tuple{Vararg{BitMatrix}}}()
 
+
 function nextshapes(shape::BitMatrix)::Tuple{Vararg{BitMatrix}}
     k = to_key(shape)
     if haskey(nextShapeDict, k)
@@ -183,7 +184,10 @@ end
 
 
 function initme()
-    originalmatrix = zeros(UInt8, 13, 13)
+
+
+
+    const originalmatrix = zeros(UInt8, 13, 13)
     data = Dict()
     data[1] = [(7, 9)]
     data[2] = [(10, 2)]
@@ -265,18 +269,9 @@ function initme()
 
     congruent_shapes[N] = congruentshapes(shapes[N][shapeidx[N]])
     congruenceidx[N] = 1
-
     t0 = time()
     t1 = t0
-
-
     while N < 17
-        if time() - t0 > 10
-            println("Profiling timeout reached.")
-            break
-        end
-
-
         #congruenceidx[N] += 1
         if congruenceidx[N] > length(congruent_shapes[N])
             congruenceidx[N] = 1
@@ -370,6 +365,4 @@ function initme()
 end
 
 
-# initme()
-@profile initme()
-Profile.print(format=:flat, sortedby=:count)
+initme()
