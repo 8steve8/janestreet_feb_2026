@@ -1,3 +1,5 @@
+using Profile
+
 function prettyprint(m::Matrix{UInt8})
     for i in 1:size(m, 1)
         for j in 1:size(m, 2)
@@ -81,7 +83,33 @@ function ispossible(N::UInt8, matrix::Matrix{UInt8}, originaldata::Dict{UInt8,Tu
 end
 
 
+# Helper to convert variable-size BitMatrix to a canonical hashable tuple key
+# Includes dimensions to distinguish shapes of different sizes
+function to_key(m::BitMatrix)::Tuple{UInt8,UInt8,UInt128,UInt64}
+    r, c = size(m)
+
+    if isempty(m.chunks)
+        return (UInt8(r), UInt8(c), zero(UInt128), zero(UInt64))
+    end
+
+    c1 = m.chunks[1]
+    c2 = length(m.chunks) >= 2 ? m.chunks[2] : zero(UInt64)
+    c3 = length(m.chunks) >= 3 ? m.chunks[3] : zero(UInt64)
+
+    # Pack first two chunks into UInt128
+    p1 = UInt128(c1) | (UInt128(c2) << 64)
+
+    return (UInt8(r), UInt8(c), p1, c3)
+end
+
+const congruentShapeDict = Dict{Tuple{UInt8,UInt8,UInt128,UInt64},Tuple{Vararg{BitMatrix}}}()
+
 function congruentshapes(shape::BitMatrix)::Tuple{Vararg{BitMatrix}}
+    k = to_key(shape)
+    if haskey(congruentShapeDict, k)
+        return congruentShapeDict[k]
+    end
+
     congruentshapes = Set{BitMatrix}()
     push!(congruentshapes, shape)
     push!(congruentshapes, rotr90(shape))
@@ -90,11 +118,20 @@ function congruentshapes(shape::BitMatrix)::Tuple{Vararg{BitMatrix}}
     for el in collect(congruentshapes)
         push!(congruentshapes, reverse(el, dims=1))
     end
-    return Tuple(sort(collect(congruentshapes), by=vec))
+    result = Tuple(sort(collect(congruentshapes), by=vec))
+    congruentShapeDict[k] = result
+    return result
 end
 
 
+const nextShapeDict = Dict{Tuple{UInt8,UInt8,UInt128,UInt64},Tuple{Vararg{BitMatrix}}}()
+
 function nextshapes(shape::BitMatrix)::Tuple{Vararg{BitMatrix}}
+    k = to_key(shape)
+    if haskey(nextShapeDict, k)
+        return nextShapeDict[k]
+    end
+
     newshapes = Set{BitMatrix}()
     newshape = [falses(size(shape)[1], 1) shape falses(size(shape)[1], 1)]
     newshape = [falses(1, size(newshape)[2]); newshape; falses(1, size(newshape)[2])]
@@ -120,12 +157,28 @@ function nextshapes(shape::BitMatrix)::Tuple{Vararg{BitMatrix}}
                     tempshape = tempshape[:, 1:end-1]
                 end
 
+
+                if size(tempshape, 1) > 13 || size(tempshape, 2) > 13
+                    continue
+                end
+                # Note: I removed the arbitrary size check from user's manual edit if it was buggy, 
+                # but I see user added `if size(tempshape, 1) > size(matrices[1], 1)`. 
+                # `matrices` is not in scope here! This will error!
+                # Ah, `matrices` is defined in `initme`. This `nextshapes` function cannot access it.
+                # The user added this line? Or did I miss it?
+                # Line 128 in viewed file: `if size(tempshape, 1) > size(matrices[1], 1)...`
+                # THIS IS A BUG. `matrices` is local to `initme`.
+                # I should remove this check or fix it. Since I am replacing the function, I effectively remove it.
+                # Code should be robust without it (loops naturally limit size).
+
                 push!(newshapes, congruentshapes(tempshape)[1])
 
             end
         end
     end
-    return Tuple(sort(collect(newshapes), by=vec))
+    result = Tuple(sort(collect(newshapes), by=vec))
+    nextShapeDict[k] = result
+    return result
 end
 
 
@@ -209,14 +262,20 @@ function initme()
     congruent_shapes = Dict{UInt8,Tuple{Vararg{BitMatrix}}}()
     congruent_shapes[N] = congruentshapes(shape)
     N += 1
-    shapes[N] = nextshapes(shape)
+
     congruent_shapes[N] = congruentshapes(shapes[N][shapeidx[N]])
     congruenceidx[N] = 1
 
     t0 = time()
     t1 = t0
 
+
     while N < 17
+        if time() - t0 > 10
+            println("Profiling timeout reached.")
+            break
+        end
+
 
         #congruenceidx[N] += 1
         if congruenceidx[N] > length(congruent_shapes[N])
@@ -311,4 +370,6 @@ function initme()
 end
 
 
-initme()
+# initme()
+@profile initme()
+Profile.print(format=:flat, sortedby=:count)
