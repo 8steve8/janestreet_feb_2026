@@ -32,8 +32,8 @@ function prettyprint(m::BitMatrix)
 end
 function ispossible(N::UInt8, matrix::Matrix{UInt8}, originaldata::Dict{UInt8,Tuple{Vararg{Tuple{UInt8,UInt8}}}})::Bool
 
-    for n in N+1:length(originaldata)
-        bmatrix = falses(size(matrix))
+    for n in N+1:maxN
+        bmatrix = falses(squaredim, squaredim)
         bmatrix[originaldata[n][1][1], originaldata[n][1][2]] = true
         #println("bmatrix = ", bmatrix)
 
@@ -48,7 +48,7 @@ function ispossible(N::UInt8, matrix::Matrix{UInt8}, originaldata::Dict{UInt8,Tu
                     bmatrix[l[1]-1, l[2]] = true
                     added = true
                 end
-                if l[1] < size(matrix, 1) && !bmatrix[l[1]+1, l[2]] && (matrix[l[1]+1, l[2]] == 0 || matrix[l[1]+1, l[2]] == n)
+                if l[1] < squaredim && !bmatrix[l[1]+1, l[2]] && (matrix[l[1]+1, l[2]] == 0 || matrix[l[1]+1, l[2]] == n)
                     push!(newlocs, (l[1] + 1, l[2]))
                     bmatrix[l[1]+1, l[2]] = true
                     added = true
@@ -58,7 +58,7 @@ function ispossible(N::UInt8, matrix::Matrix{UInt8}, originaldata::Dict{UInt8,Tu
                     bmatrix[l[1], l[2]-1] = true
                     added = true
                 end
-                if l[2] < size(matrix, 2) && !bmatrix[l[1], l[2]+1] && (matrix[l[1], l[2]+1] == 0 || matrix[l[1], l[2]+1] == n)
+                if l[2] < squaredim && !bmatrix[l[1], l[2]+1] && (matrix[l[1], l[2]+1] == 0 || matrix[l[1], l[2]+1] == n)
                     push!(newlocs, (l[1], l[2] + 1))
                     bmatrix[l[1], l[2]+1] = true
                     added = true
@@ -159,7 +159,7 @@ function nextshapes(shape::BitMatrix)::Tuple{Vararg{BitMatrix}}
                 end
 
 
-                if size(tempshape, 1) > 13 || size(tempshape, 2) > 13
+                if size(tempshape, 1) > squaredim || size(tempshape, 2) > squaredim
                     continue
                 end
                 # Note: I removed the arbitrary size check from user's manual edit if it was buggy, 
@@ -181,13 +181,29 @@ function nextshapes(shape::BitMatrix)::Tuple{Vararg{BitMatrix}}
     nextShapeDict[k] = result
     return result
 end
+const maxN::UInt8 = 16
+const squaredim::UInt8 = 13
 
+const test::Bool = true
+
+if test
+    const maxN = 6
+    const squaredim = 5
+end
 
 function initme()
 
+    println("maxN = ", maxN)
+    println("squaredim = ", squaredim)
 
+    babydata = Dict()
+    babydata[1] = [(4, 2)]
+    babydata[2] = [(5, 5)]
+    babydata[3] = [(1, 4)]
+    babydata[4] = [(3, 1), (5, 1)]
+    babydata[5] = [(2, 3), (3, 5)]
+    babydata[6] = [(1, 2), (4, 4)]
 
-    const originalmatrix = zeros(UInt8, 13, 13)
     data = Dict()
     data[1] = [(7, 9)]
     data[2] = [(10, 2)]
@@ -209,14 +225,21 @@ function initme()
     #to data[12] b/c it has to be there
     push!(data[12], (4, 11), (5, 10), (6, 10))
 
+    if test
+        data = babydata
+    end
+
+
+    matrices = [zeros(UInt8, squaredim, squaredim) for _ in 1:maxN]
+
     originaldata = Dict{UInt8,Tuple{Vararg{Tuple{UInt8,UInt8}}}}()
 
-    min_row = fill(typemax(UInt8), 16)
-    max_row = fill(typemin(UInt8), 16)
-    min_col = fill(typemax(UInt8), 16)
-    max_col = fill(typemin(UInt8), 16)
+    min_row = fill(typemax(UInt8), maxN)
+    max_row = fill(typemin(UInt8), maxN)
+    min_col = fill(typemax(UInt8), maxN)
+    max_col = fill(typemin(UInt8), maxN)
 
-    for i in 1:16
+    for i in 1:maxN
         originaldata[i] = Tuple(sort(data[i]))
         data[i] = Set(data[i])
         for j in data[i]
@@ -231,15 +254,15 @@ function initme()
     println("min_col = ", min_col)
     println("max_col = ", max_col)
 
-    for i in 1:16
+    for i in 1:maxN
         for j in originaldata[i]
-            originalmatrix[j[1], j[2]] = UInt8(i)
+            matrices[1][j[1], j[2]] = UInt8(i)
         end
     end
 
     println(originaldata)
-    println(originalmatrix)
-    prettyprint(originalmatrix)
+    println(matrices[1])
+    prettyprint(matrices[1])
 
     println(data[2])
     push!(data[2], (11, 2))
@@ -247,18 +270,17 @@ function initme()
     println(originaldata[2])
 
     shapes = Dict{UInt8,Tuple{Vararg{BitMatrix}}}()
-    placement = [(0x00, 0x00) for _ in 1:16]
+    placement = [(0x00, 0x00) for _ in 1:maxN]
 
     N::UInt8 = 1
     shapes[1] = Tuple([BitMatrix(trues(1, 1))])
     placement[1] = originaldata[1][1]
 
-    matrices = [zeros(UInt8, 13, 13) for _ in 1:16]
-    matrices[1] = copy(originalmatrix)
+
     println("ok")
 
-    shapeidx = ones(UInt8, 16)
-    congruenceidx = ones(UInt8, 16)
+    shapeidx = ones(UInt8, maxN)
+    congruenceidx = ones(UInt8, maxN)
     shapes[2] = nextshapes(shapes[1][1])
     congruent_shapes = congruentshapes(shapes[1][1])
 
@@ -271,7 +293,7 @@ function initme()
     congruenceidx[N] = 1
     t0 = time()
     t1 = t0
-    while N < 17
+    while N <= maxN
         #congruenceidx[N] += 1
         if congruenceidx[N] > length(congruent_shapes[N])
             congruenceidx[N] = 1
@@ -299,8 +321,8 @@ function initme()
 
         shape = congruent_shapes[N][congruenceidx[N]]
 
-        for row in max(placement[N][1], 1, max_row[N] - size(shape, 1) + 1):min(13 - size(shape, 1) + 1, min_row[N])
-            for col in max(placement[N][2] + 1, 1, max_col[N] - size(shape, 2) + 1):min(13 - size(shape, 2) + 1, min_col[N])
+        for row in max(placement[N][1], 1, max_row[N] - size(shape, 1) + 1):min(squaredim - size(shape, 1) + 1, min_row[N])
+            for col in max(placement[N][2] + 1, 1, max_col[N] - size(shape, 2) + 1):min(squaredim - size(shape, 2) + 1, min_col[N])
                 Ncount = 0
                 for r in axes(shape, 1)
                     for c in axes(shape, 2)
@@ -331,7 +353,7 @@ function initme()
 
 
                 placement[N] = (row, col)
-                if time() - t1 > 100 || N >= 15
+                if time() - t1 > 100 || N >= maxN - 1
                     println("time = ", time() - t0, " seconds")
                     println(N)
                     println(shapeidx)
@@ -342,7 +364,7 @@ function initme()
 
 
                 N += 1
-                N > 16 && @goto end_of_program
+                N > maxN && @goto end_of_program
                 congruenceidx[N] = 0
                 shapeidx[N] = 1
                 shapes[N] = nextshapes(shape)
@@ -360,7 +382,8 @@ function initme()
 
     end
     @label end_of_program
-    prettyprint(matrices[16])
+    println("time = ", time() - t0, " seconds")
+    prettyprint(matrices[maxN])
 
 end
 
